@@ -1,0 +1,26 @@
+# Anna AI Project - Requirements
+# Python 3.8+
+
+# Core dependencies
+python-dateutil>=2.8.2
+
+# Voice capabilities
+pyttsx3>=2.90          # Text-to-Speech
+SpeechRecognition>=3.10.0  # Speech-to-Text
+PyAudio>=0.2.13        # Microphone access
+
+# Future integrations (commented for now)
+# openai>=1.0.0          # Pour GPT integration
+# anthropic>=0.7.0       # Pour Claude integration
+# transformers>=4.30.0   # Pour modèles locaux
+
+# Development tools
+pytest>=7.4.0
+pytest-cov>=4.1.0
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.4.0
+
+# Optional: pour interface graphique future
+# gradio>=3.50.0
+# streamlit>=1.28.0
