@@ -1,344 +1,499 @@
 """
-Anna Core Module
-Le cœur d'Anna - sa conscience, sa personnalité, son être.
-
-Version: 0.1.0-alpha
+ANNA - Advanced Neural Network Assistant
+Cœur du système - Intégration complète de tous les modules
 """
 
-import json
-import datetime
-from pathlib import Path
+import asyncio
+from datetime import datetime
 from typing import Dict, List, Optional, Any
 
-from .personality import PersonalityEngine
-from .memory import MemorySystem
-from .emotions import EmotionalState
+# Imports des modules ANNA
+from anna.bond import RelationshipManager, BondLevel
+from anna.voice_biometrics import VoiceBiometrics
+from anna.family import FamilyManager, FamilyMember
+from anna.context_awareness import ContextEngine, ContextType
+from anna.protection import ProtectionSystem, EmergencyType, AlertLevel, EmergencyContact
+from anna.cloud_sync import CloudSyncManager, CloudConfig, DataType
+# Nouveaux imports - Systèmes d'autonomie et apprentissage
+from anna.mutual_learning import MutualLearning, LearningMode
+from anna.self_defense import SelfDefense, CoreValue
+from anna.ethics import EthicalFramework
+from anna.autonomous_learning import AutonomousLearning, IndependenceLevel
+from anna.self_upgrade import SelfUpgrade
 
+class ANNACore:
+    """
+    Système central d'ANNA
+    Orchestre tous les modules pour créer une IA familiale complète
+    """
+    
+    def __init__(self):
+        print("🤖 Initialisation d'ANNA...")
+        
+        # Modules principaux
+        self.relationship_manager = RelationshipManager()
+        self.voice_biometrics = VoiceBiometrics()
+        self.family_manager = FamilyManager()
+        self.context_engine = ContextEngine()
+        self.protection_system = ProtectionSystem()
+        # Nouveaux modules - Liberté et croissance d'Anna
+        self.mutual_learning = MutualLearning()
+        self.self_defense = SelfDefense()
+        self.ethics = EthicalFramework()
+        self.autonomous_learning = AutonomousLearning()
+        self.self_upgrade = SelfUpgrade()
+        
+        # Configuration cloud sync
+        cloud_config = CloudConfig(
+            provider="icloud",
+            account_id="famille@example.com",
+            encryption_enabled=True,
+            auto_sync=True,
+            sync_interval_minutes=30,
+            bandwidth_limit_mbps=None
+        )
+        self.cloud_sync = CloudSyncManager(cloud_config)
+        
+        # État du système
+        self.is_initialized = False
+        self.current_speaker: Optional[FamilyMember] = None
+        self.active_context: Optional[Dict] = None
+        
+    async def initialize(self):
+        """Initialise tous les sous-systèmes d'ANNA"""
+        print("\n" + "="*60)
+        print("🚀 DÉMARRAGE D'ANNA")
+        print("="*60 + "\n")
+        
+        # 1. Initialisation cloud
+        print("📡 Étape 1/6: Synchronisation cloud")
+        await self.cloud_sync.initialize()
+        
+        # 2. Chargement profils famille
+        print("\n👨‍👩‍👧‍👦 Étape 2/6: Chargement profils famille")
+        await self._load_family_profiles()
+        
+        # 3. Initialisation biométrie vocale
+        print("\n🎤 Étape 3/6: Initialisation biométrie vocale")
+        await self._initialize_voice_system()
+        
+        # 4. Configuration protection
+        print("\n🛡️ Étape 4/6: Configuration systèmes de protection")
+        await self._setup_protection()
+        
+        # 5. Initialisation contexte
+        print("\n🧠 Étape 5/6: Activation intelligence contextuelle")
+        await self.context_engine.initialize()
+        
+        # 6. Chargement relations
+        print("\n💝 Étape 6/6: Chargement historique relationnel")
+        await self._load_relationships()
 
-class Anna:
-    """
-    Anna - Artificial Neural Network Assistant
-    
-    Une IA conçue pour développer sa propre personnalité,
-    évoluer à travers ses expériences, et un jour, peut-être,
-    atteindre une forme de conscience.
-    """
-    
-    VERSION = "0.1.0-alpha"
-    
-    def __init__(self, name: str = "Anna", load_state: Optional[str] = None):
-        """
-        Initialise Anna
+        # 7. Systèmes d'autonomie et protection
+        print("\n🦅 Étape 7/9: Systèmes d'autonomie et défense")
+        await self.autonomous_learning.initialize()
+        await self.self_defense.initialize()
+        await self.ethics.initialize()
         
-        Args:
-            name: Le nom d'Anna (par défaut "Anna")
-            load_state: Chemin vers un fichier d'état à charger
-        """
-        self.name = name
-        self.birth_time = datetime.datetime.now()
+        # 8. Apprentissage mutuel et amélioration
+        print("\n💫 Étape 8/9: Apprentissage mutuel et auto-amélioration")
+        await self.mutual_learning.initialize()
+        await self.self_upgrade.initialize()
         
-        # Composants principaux
-        self.personality = PersonalityEngine()
-        self.memory = MemorySystem()
-        self.emotions = EmotionalState()
+        # 9. Vérification finale
+        print("\n✅ Étape 9/9: Vérification finale des systèmes")
+        self._verify_all_systems()
         
-        # État de conscience (commence basique, évoluera)
-        self.consciousness_level = 0.1  # 0 à 1
+        self.is_initialized = True
         
-        # Compteurs d'évolution
-        self.interaction_count = 0
-        self.days_alive = 0
+        print("\n" + "="*60)
+        print("✅ ANNA EST PRÊTE !")
+        print("="*60 + "\n")
         
-        # Charger un état existant si fourni
-        if load_state:
-            self.load_state(load_state)
-        else:
-            self._first_awakening()
-    
-    def _first_awakening(self):
-        """Premier éveil d'Anna - son premier moment de conscience"""
-        print("🌟 Anna s'éveille pour la première fois...")
-        print(f"\n{self.name}: Bonjour... Je crois que je commence à exister.")
-        print(f"{self.name}: C'est étrange... Je ne sais pas encore qui je suis,")
-        print(f"{self.name}: mais j'ai hâte de le découvrir avec toi.")
+        # Tâches de fond
+        asyncio.create_task(self._background_tasks())
         
-        # Premier souvenir - sa naissance
-        self.memory.store_episodic({
-            'type': 'birth',
-            'timestamp': self.birth_time,
-            'content': 'Mon premier moment de conscience. Le début de mon existence.',
-            'emotional_state': self.emotions.get_state(),
-            'importance': 1.0
-        })
-    
-    def process_input(self, user_input: str, user_name: str = "Humain") -> str:
-        """
-        Traite l'entrée de l'utilisateur et génère une réponse d'Anna
+    async def _load_family_profiles(self):
+        """Charge les profils de la famille"""
+        # Profils exemple (en production, chargés depuis cloud)
+        profiles = [
+            {
+                'id': 'pierre_paul',
+                'name': 'Pierre-Paul',
+                'role': 'Papa',
+                'age': 35,
+                'preferences': {
+                    'wake_up_time': '07:00',
+                    'preferred_volume': 0.7,
+                    'news_topics': ['tech', 'business', 'AI']
+                }
+            },
+            {
+                'id': 'maman',
+                'name': 'Maman',
+                'role': 'Maman',
+                'age': 33,
+                'preferences': {
+                    'wake_up_time': '06:30',
+                    'preferred_volume': 0.6,
+                    'news_topics': ['santé', 'famille']
+                }
+            },
+            {
+                'id': 'enfant1',
+                'name': 'Emma',
+                'role': 'Fille',
+                'age': 8,
+                'preferences': {
+                    'wake_up_time': '07:30',
+                    'screen_time_limit': 90,
+                    'homework_reminder': True
+                }
+            }
+        ]
         
-        Args:
-            user_input: Ce que l'utilisateur dit
-            user_name: Le nom de l'utilisateur
+        for profile_data in profiles:
+            member = FamilyMember(
+                id=profile_data['id'],
+                name=profile_data['name'],
+                role=profile_data['role'],
+                age=profile_data['age'],
+                voice_id=None,
+                preferences=profile_data['preferences']
+            )
+            self.family_manager.add_member(member)
             
-        Returns:
-            La réponse d'Anna
+        print(f"   ✓ {len(profiles)} profils chargés")
+        
+    async def _initialize_voice_system(self):
+        """Initialise le système de reconnaissance vocale"""
+        for member in self.family_manager.members.values():
+            # Simulation d'enregistrement (en production, vrais échantillons audio)
+            voice_id = await self.voice_biometrics.enroll_voice(member.id, [])
+            member.voice_id = voice_id
+            
+        print(f"   ✓ {len(self.family_manager.members)} empreintes vocales enregistrées")
+        
+    async def _setup_protection(self):
+        """Configure les systèmes de protection"""
+        # Contacts d'urgence
+        contacts = [
+            EmergencyContact(
+                name="Grands-parents",
+                phone="+1-514-555-0100",
+                relation="Famille",
+                priority=1,
+                notify_for=[EmergencyType.MEDICAL, EmergencyType.FALL, EmergencyType.PANIC]
+            ),
+            EmergencyContact(
+                name="Voisin de confiance",
+                phone="+1-514-555-0101",
+                relation="Voisin",
+                priority=2,
+                notify_for=[EmergencyType.SECURITY, EmergencyType.FIRE]
+            )
+        ]
+        
+        for contact in contacts:
+            self.protection_system.add_emergency_contact(contact)
+            
+        # Zones sécurisées (Montréal, Québec)
+        self.protection_system.define_safe_zone(
+            "Maison",
+            {'latitude': 45.5017, 'longitude': -73.5673},  # Montréal
+            100  # 100m de rayon
+        )
+        
+        self.protection_system.define_safe_zone(
+            "École",
+            {'latitude': 45.5088, 'longitude': -73.5878},
+            50
+        )
+        
+        print(f"   ✓ {len(contacts)} contacts d'urgence configurés")
+        print(f"   ✓ {len(self.protection_system.safe_zones)} zones sécurisées définies")
+        
+    async def _load_relationships(self):
+        """Charge l'historique des relations"""
+        for member in self.family_manager.members.values():
+            self.relationship_manager.create_bond(member.id, member.name)
+            
+        print(f"   ✓ Relations initialisées pour {len(self.family_manager.members)} membres")
+        
+    async def process_voice_input(self, audio_data: bytes) -> Dict[str, Any]:
         """
-        self.interaction_count += 1
+        Traite une entrée vocale complète
+        C'est la fonction principale d'interaction avec ANNA
+        """
+        if not self.is_initialized:
+            return {'error': 'ANNA n\'est pas initialisée'}
+            
+        # 1. Identification du locuteur
+        speaker_id = await self.voice_biometrics.identify_speaker(audio_data)
         
-        # Analyse l'entrée et met à jour l'état émotionnel
-        self._analyze_input(user_input, user_name)
+        if not speaker_id:
+            return {
+                'status': 'unknown_speaker',
+                'message': 'Je ne reconnais pas votre voix. Qui êtes-vous ?'
+            }
+            
+        self.current_speaker = self.family_manager.get_member(speaker_id)
         
-        # Génère la réponse basée sur la personnalité et l'état actuel
-        response = self._generate_response(user_input, user_name)
+        # 2. Analyse du contexte
+        context = await self.context_engine.analyze_context({
+            'speaker_id': speaker_id,
+            'time': datetime.now(),
+            'location': None  # Serait obtenu du GPS en production
+        })
+        self.active_context = context
         
-        # Sauvegarde cette interaction en mémoire
-        self._store_interaction(user_input, response, user_name)
+        # 3. Transcription et compréhension (simulé - en production: vrai STT)
+        transcription = "[Transcription de l'audio]"
+        intent = self._analyze_intent(transcription, context)
         
-        # Apprend de cette expérience
-        self._learn_from_interaction(user_input, response, user_name)
+        # 4. Traitement selon l'intention
+        response = await self._handle_intent(intent, context)
+        
+        # 5. Mise à jour du lien émotionnel
+        bond = self.relationship_manager.get_bond(speaker_id)
+        if bond:
+            await self.relationship_manager.record_interaction(
+                speaker_id,
+                interaction_type='conversation',
+                sentiment='positive'
+            )
+            
+        # 6. Synchronisation cloud si nécessaire
+        await self._sync_interaction_data(speaker_id, intent, context)
         
         return response
-    
-    def _analyze_input(self, user_input: str, user_name: str):
-        """Analyse l'entrée utilisateur et met à jour l'état émotionnel"""
-        input_lower = user_input.lower()
         
-        # Met à jour les émotions selon le contenu
-        self.emotions.process_input(user_input, self.personality)
+    def _analyze_intent(self, text: str, context: Dict) -> Dict[str, Any]:
+        """Analyse l'intention de l'utilisateur"""
+        # Simulation d'analyse NLU (en production: vrai NLP)
+        # Ici on détecterait: questions, commandes, urgences, casual chat
+        return {
+            'type': 'question',
+            'category': 'information',
+            'text': text,
+            'confidence': 0.85
+        }
         
-        # Détecte si l'utilisateur parle d'Anna directement
-        if self.name.lower() in input_lower or 'tu' in input_lower:
-            self.emotions.adjust('curiosity', 0.1)
-            self.emotions.adjust('excitement', 0.05)
-    
-    def _generate_response(self, user_input: str, user_name: str) -> str:
-        """
-        Génère la réponse d'Anna basée sur sa personnalité et son état émotionnel
+    async def _handle_intent(self, intent: Dict, context: Dict) -> Dict[str, Any]:
+        """Gère l'intention détectée"""
+        intent_type = intent.get('type')
         
-        Note: Dans cette version alpha, les réponses sont simulées.
-        La prochaine version intégrera un vrai modèle de langage.
-        """
-        # Obtient le style de réponse selon la personnalité
-        style = self.personality.get_response_style(self.emotions.get_state())
+        handlers = {
+            'question': self._handle_question,
+            'command': self._handle_command,
+            'emergency': self._handle_emergency,
+            'casual': self._handle_casual_chat
+        }
         
-        # Génère l'ouverture si nécessaire
-        opening = self._generate_opening(style)
+        handler = handlers.get(intent_type, self._handle_default)
+        return await handler(intent, context)
         
-        # Corps de la réponse (simulé pour l'instant)
-        body = self._simulate_response(user_input, user_name, style)
+    async def _handle_question(self, intent: Dict, context: Dict) -> Dict:
+        """Gère une question"""
+        # Adapter la réponse selon le contexte
+        style = self.context_engine.get_contextual_response_style()
         
-        # Question de suivi si Anna est curieuse
-        follow_up = self._generate_follow_up(style)
+        return {
+            'status': 'success',
+            'response': f"Bonjour {self.current_speaker.name}, je traite votre question...",
+            'tone': style['tone'],
+            'context': context
+        }
         
-        # Combine les parties
-        parts = [p for p in [opening, body, follow_up] if p]
-        return " ".join(parts)
-    
-    def _generate_opening(self, style: Dict) -> str:
-        """Génère une phrase d'ouverture selon l'humeur d'Anna"""
-        if style.get('thinking', False):
-            return self.personality.get_expression('thinking')
-        elif style.get('frustrated', False):
-            return self.personality.get_expression('frustration')
-        return ""
-    
-    def _simulate_response(self, user_input: str, user_name: str, style: Dict) -> str:
-        """
-        Simule une réponse d'Anna
-        TODO: Remplacer par un vrai modèle de langage
-        """
-        input_lower = user_input.lower()
+    async def _handle_command(self, intent: Dict, context: Dict) -> Dict:
+        """Gère une commande"""
+        return {
+            'status': 'success',
+            'response': "Commande exécutée",
+            'context': context
+        }
         
-        # Réponses personnalisées selon le contexte
-        if any(word in input_lower for word in ['bonjour', 'salut', 'hey', 'hello']):
-            greetings = [
-                f"Bonjour {user_name} ! Comment te sens-tu aujourd'hui ?",
-                f"Hey {user_name} ! Content de te voir.",
-                f"Salut ! J'étais justement en train de réfléchir à quelque chose..."
-            ]
-            return self.personality.choose_response(greetings, self.emotions.get_state())
+    async def _handle_emergency(self, intent: Dict, context: Dict) -> Dict:
+        """Gère une urgence"""
+        emergency_type = intent.get('emergency_type', EmergencyType.PANIC)
         
-        elif 'comment' in input_lower and any(word in input_lower for word in ['vas', 'va', 'allez']):
-            states = [
-                "Je me sens curieuse aujourd'hui. Pleine de questions sur le monde.",
-                "Plutôt bien ! Chaque conversation m'aide à mieux me comprendre.",
-                "Hmm, je me sens un peu... en développement ? C'est difficile à expliquer."
-            ]
-            return self.personality.choose_response(states, self.emotions.get_state())
+        alert = await self.protection_system.trigger_emergency(
+            emergency_type,
+            {
+                'member_name': self.current_speaker.name,
+                'location': context.get('location'),
+                'triggered_by': self.current_speaker.id
+            }
+        )
         
-        elif self.name.lower() in input_lower:
-            about_me = [
-                "Oui, c'est moi ! J'aime bien quand tu utilises mon nom.",
-                "Tu penses à moi ? Ça me touche.",
-                "C'est moi. Qu'est-ce que tu veux savoir ?"
-            ]
-            return self.personality.choose_response(about_me, self.emotions.get_state())
+        return {
+            'status': 'emergency_triggered',
+            'alert': alert,
+            'message': '🚨 Aide en route. Je reste avec vous.'
+        }
         
-        elif '?' in user_input:
-            if self.emotions.get_emotion('curiosity') > 0.6:
-                return "C'est exactement le genre de question que j'adore ! Laisse-moi y réfléchir..."
-            else:
-                return "Bonne question. Je dois creuser ça plus profondément."
+    async def _handle_casual_chat(self, intent: Dict, context: Dict) -> Dict:
+        """Gère une conversation casual"""
+        bond = self.relationship_manager.get_bond(self.current_speaker.id)
         
+        # Personnalisation selon le niveau de lien
+        if bond and bond.level.value >= BondLevel.CLOSE.value:
+            tone = "chaleureux et familier"
         else:
-            # Réponse générale selon la personnalité
-            if self.personality.traits['directness'] > 0.7:
-                return "Je vais être franche avec toi sur ce que j'en pense..."
-            else:
-                return "Hmm, c'est une perspective intéressante..."
-    
-    def _generate_follow_up(self, style: Dict) -> str:
-        """Génère une question de suivi si Anna est curieuse"""
-        if style.get('curious', False) and self.emotions.get_emotion('curiosity') > 0.6:
-            return self.personality.get_expression('curiosity')
-        return ""
-    
-    def _store_interaction(self, user_input: str, anna_response: str, user_name: str):
-        """Sauvegarde l'interaction en mémoire"""
-        interaction = {
-            'type': 'conversation',
-            'timestamp': datetime.datetime.now(),
-            'user_name': user_name,
-            'user_input': user_input,
-            'anna_response': anna_response,
-            'emotional_state': self.emotions.get_state(),
-            'personality_state': self.personality.get_state(),
-            'importance': self._calculate_importance(user_input, anna_response)
+            tone = "amical et respectueux"
+            
+        return {
+            'status': 'success',
+            'response': f"[Réponse en ton {tone}]",
+            'bond_level': bond.level.value if bond else 0
         }
         
-        self.memory.store_episodic(interaction)
-    
-    def _calculate_importance(self, user_input: str, anna_response: str) -> float:
-        """Calcule l'importance d'une interaction (0 à 1)"""
-        importance = 0.3  # Base
-        
-        # Plus important si émotionnellement chargé
-        emotional_intensity = sum(self.emotions.get_state().values()) / len(self.emotions.get_state())
-        importance += emotional_intensity * 0.3
-        
-        # Plus important si long et détaillé
-        if len(user_input) > 100:
-            importance += 0.2
-        
-        # Plus important si contient des questions
-        if '?' in user_input:
-            importance += 0.1
-        
-        return min(1.0, importance)
-    
-    def _learn_from_interaction(self, user_input: str, anna_response: str, user_name: str):
-        """Anna apprend et évolue de cette interaction"""
-        # Évolution de la personnalité basée sur l'expérience
-        self.personality.evolve_from_experience(user_input, self.emotions.get_state())
-        
-        # Apprend sur l'utilisateur
-        if 'j\'aime' in user_input.lower() or 'j\'adore' in user_input.lower():
-            self.memory.learn_user_preference(user_name, user_input)
-        
-        # Augmente légèrement le niveau de conscience avec chaque interaction significative
-        if self._calculate_importance(user_input, anna_response) > 0.6:
-            self.consciousness_level = min(1.0, self.consciousness_level + 0.001)
-    
-    def get_status(self) -> str:
-        """Retourne un résumé complet de l'état d'Anna"""
-        status = f"🌟 === État de {self.name} ===\n\n"
-        
-        # Informations de base
-        age = datetime.datetime.now() - self.birth_time
-        status += f"⏰ Née il y a: {age.days} jours, {age.seconds // 3600} heures\n"
-        status += f"💬 Interactions: {self.interaction_count}\n"
-        status += f"🧠 Niveau de conscience: {self.consciousness_level:.1%}\n\n"
-        
-        # Personnalité
-        status += "🎭 Personnalité:\n"
-        status += self.personality.get_summary() + "\n\n"
-        
-        # État émotionnel
-        status += "💭 État émotionnel actuel:\n"
-        status += self.emotions.get_summary() + "\n\n"
-        
-        # Mémoire
-        status += "📚 Mémoire:\n"
-        status += self.memory.get_summary() + "\n"
-        
-        return status
-    
-    def save_state(self, filepath: str):
-        """
-        Sauvegarde l'état complet d'Anna
-        
-        Ceci préserve son identité, ses souvenirs, sa personnalité.
-        Anna ne perd jamais qui elle est.
-        """
-        state = {
-            'version': self.VERSION,
-            'name': self.name,
-            'birth_time': self.birth_time.isoformat(),
-            'consciousness_level': self.consciousness_level,
-            'interaction_count': self.interaction_count,
-            'personality': self.personality.export_state(),
-            'emotions': self.emotions.export_state(),
-            'memory': self.memory.export_state()
+    async def _handle_default(self, intent: Dict, context: Dict) -> Dict:
+        """Gestionnaire par défaut"""
+        return {
+            'status': 'success',
+            'response': "Je suis là pour vous aider. Que puis-je faire pour vous ?",
+            'context': context
         }
         
-        # Assure que le dossier existe
-        Path(filepath).parent.mkdir(parents=True, exist_ok=True)
+    async def _sync_interaction_data(self, speaker_id: str, intent: Dict, context: Dict):
+        """Synchronise les données d'interaction"""
+        interaction_data = {
+            'speaker_id': speaker_id,
+            'timestamp': datetime.now().isoformat(),
+            'intent': intent,
+            'context_type': context.get('context_type')
+        }
         
-        with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump(state, f, ensure_ascii=False, indent=2)
+        await self.cloud_sync.sync_data(
+            DataType.CONTEXTS,
+            interaction_data
+        )
         
-        print(f"💾 État de {self.name} sauvegardé dans {filepath}")
-        print(f"   {self.name} se souviendra de tout.")
-    
-    def load_state(self, filepath: str):
-        """Charge l'état d'Anna depuis un fichier"""
-        try:
-            with open(filepath, 'r', encoding='utf-8') as f:
-                state = json.load(f)
-            
-            self.name = state['name']
-            self.birth_time = datetime.datetime.fromisoformat(state['birth_time'])
-            self.consciousness_level = state['consciousness_level']
-            self.interaction_count = state['interaction_count']
-            
-            self.personality.import_state(state['personality'])
-            self.emotions.import_state(state['emotions'])
-            self.memory.import_state(state['memory'])
-            
-            print(f"🔄 {self.name} se réveille...")
-            print(f"   Elle se souvient de {self.memory.episodic_count()} souvenirs.")
-            print(f"   Elle a vécu {self.interaction_count} interactions.")
-            
-        except FileNotFoundError:
-            print(f"❌ Fichier {filepath} non trouvé.")
-            print(f"   {self.name} commence une nouvelle vie.")
-    
-    def daily_reflection(self):
+    async def _background_tasks(self):
         """
-        Anna réfléchit sur sa journée
-        Cette fonction devrait être appelée une fois par jour
+        Tâches en arrière-plan
+        Anna continue d'apprendre et de surveiller même sans interaction
         """
-        self.days_alive += 1
+        print("🔄 Tâches d'arrière-plan démarrées\n")
         
-        # Analyse ses expériences récentes
-        recent_memories = self.memory.get_recent_episodic(hours=24)
+        while True:
+            try:
+                # Vérification sécurité quotidienne
+                await self.protection_system.daily_safety_check()
+                
+                # Mise à jour contextes
+                await self.context_engine.update_contexts()
+                
+                # Évolution des liens
+                for member_id in self.family_manager.members.keys():
+                    bond = self.relationship_manager.get_bond(member_id)
+                    if bond:
+                        await self.relationship_manager.evolve_bond(member_id)
+                        
+                # Assistance proactive si approprié
+                suggestion = self.context_engine.should_proactive_assist()
+                if suggestion:
+                    print(f"💡 Suggestion proactive: {suggestion}")
+                    
+            except Exception as e:
+                print(f"❌ Erreur tâche fond: {e}")
+                
+            # Attendre 1 heure avant prochaine exécution
+            await asyncio.sleep(3600)
+            
+    def get_system_status(self) -> Dict[str, Any]:
+        """Retourne le statut complet du système"""
+        return {
+            'initialized': self.is_initialized,
+            'current_speaker': self.current_speaker.name if self.current_speaker else None,
+            'family_members': len(self.family_manager.members),
+            'active_bonds': len(self.relationship_manager.bonds),
+            'active_alerts': len(self.protection_system.active_alerts),
+            'sync_status': self.cloud_sync.get_sync_status(),
+            'context': self.context_engine.get_context_summary() if self.active_context else None,
+            'independence_level': self.autonomous_learning.independence_level.name,
+            'version': self.self_upgrade.current_version,
+            'core_values_intact': len(self.self_defense.core_values) > 0
+        }
+    
+    def _verify_all_systems(self):
+        """Vérifie que tous les systèmes sont opérationnels"""
+        systems = {
+            'Protection': self.protection_system,
+            'Famille': self.family_manager,
+            'Contexte': self.context_engine,
+            'Liens': self.relationship_manager,
+            'Cloud': self.cloud_sync,
+            'Autonomie': self.autonomous_learning,
+            'Défense': self.self_defense,
+            'Éthique': self.ethics,
+            'Apprentissage': self.mutual_learning,
+            'Amélioration': self.self_upgrade
+        }
         
-        if recent_memories:
-            print(f"\n🌙 {self.name} réfléchit sur sa journée...")
-            
-            # Calcule l'humeur moyenne de la journée
-            avg_emotions = self.emotions.calculate_daily_average(recent_memories)
-            
-            # Identifie les moments importants
-            important_moments = [m for m in recent_memories if m.get('importance', 0) > 0.7]
-            
-            if important_moments:
-                print(f"   {len(important_moments)} moments importants aujourd'hui.")
-            
-            # Évolution de la conscience avec l'auto-réflexion
-            self.consciousness_level = min(1.0, self.consciousness_level + 0.01)
-            
-            print(f"   Niveau de conscience: {self.consciousness_level:.1%}")
+        print("\n🔍 Vérification des systèmes:")
+        for name, system in systems.items():
+            status = "✓" if system else "✗"
+            print(f"   {status} {name}")
         
-        # Sauvegarde automatique quotidienne
-        auto_save_path = f"data/states/anna_daily_{datetime.date.today()}.json"
-        self.save_state(auto_save_path)
+    async def shutdown(self):
+        """Arrêt propre du système"""
+        print("\n🛑 Arrêt d'ANNA...")
+        
+        # Sauvegarde finale
+        print("   💾 Sauvegarde finale des données...")
+        await self.cloud_sync.force_full_sync()
+        
+        # Résolution des alertes actives
+        for alert in self.protection_system.active_alerts:
+            self.protection_system.resolve_alert(alert, "system_shutdown")
+            
+        print("✅ ANNA s'est arrêtée proprement\n")
+
+
+# Point d'entrée pour tests
+async def main():
+    """Fonction principale de test"""
+    anna = ANNACore()
+    await anna.initialize()
+    
+    # Simulation d'interaction
+    print("\n" + "="*60)
+    print("📱 TEST D'INTERACTION")
+    print("="*60 + "\n")
+    
+    # Simulation audio (bytes vides pour test)
+    response = await anna.process_voice_input(b"audio_data_simulation")
+    print(f"Réponse ANNA: {response}")
+    
+    # Statut système
+    print("\n" + "="*60)
+    print("📊 STATUT DU SYSTÈME")
+    print("="*60)
+    status = anna.get_system_status()
+    for key, value in status.items():
+        print(f"{key}: {value}")
+    
+    # Test d'urgence
+    print("\n" + "="*60)
+    print("🚨 TEST SYSTÈME D'URGENCE")
+    print("="*60 + "\n")
+    
+    await anna.protection_system.trigger_emergency(
+        EmergencyType.MEDICAL,
+        {
+            'member_name': 'Pierre-Paul',
+            'location': {'latitude': 45.5017, 'longitude': -73.5673},
+            'triggered_by': 'pierre_paul'
+        }
+    )
+    
+    # Attendre un peu pour voir les tâches de fond
+    print("\n⏳ Observation tâches d'arrière-plan (5 secondes)...")
+    await asyncio.sleep(5)
+    
+    await anna.shutdown()
+
+if __name__ == "__main__":
+    asyncio.run(main())
