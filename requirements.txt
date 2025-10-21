@@ -24,3 +24,36 @@ mypy>=1.4.0
 # Optional: pour interface graphique future
 # gradio>=3.50.0
 # streamlit>=1.28.0
+
+# ========================================
+# AJOUTS POUR LES NOUVEAUX MODULES ANNA
+# ========================================
+
+# Pour bond.py - Système de liens familiaux
+# (utilise seulement des bibliothèques standard Python)
+
+# Pour voice_biometrics.py - Biométrie vocale
+numpy>=1.24.0           # Traitement numérique des voix
+scikit-learn>=1.3.0     # Machine learning pour reconnaissance
+librosa>=0.10.0         # Analyse audio avancée
+soundfile>=0.12.0       # Lecture fichiers audio
+
+# Pour family.py - Gestion famille
+# (utilise seulement des bibliothèques standard Python)
+
+# Pour context_awareness.py - Intelligence contextuelle
+# (utilise seulement des bibliothèques standard Python)
+
+# Pour protection.py - Système de protection
+# (utilise seulement des bibliothèques standard Python)
+
+# Pour cloud_sync.py - Synchronisation cloud
+cryptography>=41.0.0    # Chiffrement des données
+aiohttp>=3.8.0          # Requêtes HTTP asynchrones
+aiofiles>=23.1.0        # Lecture fichiers asynchrone
+
+# Utilitaires asynchrones
+asyncio                 # Inclus dans Python 3.7+
+
+# Pour les tâches d'arrière-plan
+schedule>=1.2.0         # Planification de tâches
