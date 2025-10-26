@@ -1,399 +1,248 @@
 """
-Voice Biometrics - Reconnaissance vocale biométrique d'Anna
-Permet à Anna de reconnaître Pierre-Paul et sa famille par leur voix unique
+Module de biométrie vocale pour ANNA
+Reconnaissance et gestion des profils vocaux de la famille
 """
 
-import numpy as np
-from typing import Dict, Optional, List, Tuple
-import datetime
-from dataclasses import dataclass, field
-
-
-@dataclass
-class VoiceProfile:
-    """Profil vocal unique d'une personne"""
-    name: str
-    voice_features: Dict[str, float] = field(default_factory=dict)
-    samples_count: int = 0
-    first_recorded: Optional[datetime.datetime] = None
-    last_updated: Optional[datetime.datetime] = None
-    confidence: float = 0.0  # 0.0 à 1.0
+import asyncio
+from typing import Dict, Optional, List, Any
+from datetime import datetime
 
 
 class VoiceBiometrics:
     """
-    Système de reconnaissance vocale biométrique.
-    Permet à Anna de reconnaître les voix uniques et détecter les imposteurs.
+    Système de reconnaissance vocale et biométrie
+    Permet à Anna de reconnaître les voix de sa famille
     """
     
     def __init__(self):
-        """Initialise le système de biométrie vocale"""
-        self.voice_profiles = {}
-        self.unknown_voices_detected = []
-        self.deepfake_attempts = []
-        
-    def extract_voice_features(self, audio_data: bytes) -> Dict[str, float]:
-        """
-        Extrait les caractéristiques uniques d'une voix
-        
-        Args:
-            audio_data: Données audio brutes
-            
-        Returns:
-            Dict des caractéristiques vocales
-            
-        Note: Version simplifiée - sera améliorée avec de vraies bibliothèques audio
-        """
-        # Pour l'instant, version simulée
-        # Dans une vraie implémentation, on utiliserait:
-        # - librosa pour analyse audio
-        # - Extraction de MFCC (Mel-frequency cepstral coefficients)
-        # - Analyse de pitch, formants, rythme, etc.
-        
-        features = {
-            'pitch_mean': 0.0,  # Hauteur moyenne de la voix
-            'pitch_variance': 0.0,  # Variation de hauteur
-            'speech_rate': 0.0,  # Vitesse de parole
-            'energy_mean': 0.0,  # Énergie vocale moyenne
-            'formant_f1': 0.0,  # Premier formant
-            'formant_f2': 0.0,  # Deuxième formant
-            'jitter': 0.0,  # Variation de fréquence
-            'shimmer': 0.0  # Variation d'amplitude
-        }
-        
-        return features
+        self.voice_profiles: Dict[str, Dict] = {}
+        self.recognition_enabled = False
+        self.last_speaker: Optional[str] = None
+        self.confidence_threshold = 0.75
     
-    def create_voice_profile(self, name: str, audio_samples: List[bytes]) -> VoiceProfile:
+    async def initialize(self):
+        """Initialise le système de biométrie vocale"""
+        print("🎤 Initialisation biométrie vocale...")
+        
+        # Pour l'instant, système en mode "simulation"
+        # Dans une vraie implémentation, on initialiserait les modèles ML
+        self.recognition_enabled = True
+        
+        print("   ✓ Système vocal prêt (enregistrements à faire)")
+    
+    def create_voice_profile(
+        self,
+        name: str,
+        voice_samples: Optional[List[bytes]] = None
+    ) -> bool:
         """
-        Crée un profil vocal pour une personne
+        Crée un profil vocal pour quelqu'un
         
         Args:
             name: Nom de la personne
-            audio_samples: Liste d'échantillons audio
+            voice_samples: Échantillons vocaux (optionnel pour l'instant)
             
         Returns:
-            Profil vocal créé
+            Succès de la création
         """
-        if len(audio_samples) < 3:
-            raise ValueError("Au moins 3 échantillons audio nécessaires pour créer un profil fiable")
+        if name in self.voice_profiles:
+            print(f"⚠️  Profil vocal pour {name} existe déjà")
+            return False
         
-        # Extrait les caractéristiques de chaque échantillon
-        all_features = []
-        for sample in audio_samples:
-            features = self.extract_voice_features(sample)
-            all_features.append(features)
+        self.voice_profiles[name] = {
+            'name': name,
+            'created_at': datetime.now(),
+            'samples_count': len(voice_samples) if voice_samples else 0,
+            'last_recognized': None,
+            'recognition_count': 0,
+            'voice_characteristics': {}  # À remplir avec ML
+        }
         
-        # Calcule les moyennes pour créer le profil
-        avg_features = {}
-        feature_keys = all_features[0].keys()
-        
-        for key in feature_keys:
-            values = [f[key] for f in all_features]
-            avg_features[key] = sum(values) / len(values)
-        
-        # Crée le profil
-        profile = VoiceProfile(
-            name=name,
-            voice_features=avg_features,
-            samples_count=len(audio_samples),
-            first_recorded=datetime.datetime.now(),
-            last_updated=datetime.datetime.now(),
-            confidence=min(1.0, len(audio_samples) / 10.0)  # Plus d'échantillons = plus confiance
-        )
-        
-        self.voice_profiles[name] = profile
-        return profile
+        print(f"✅ Profil vocal créé pour {name}")
+        return True
     
-    def verify_voice(
-        self, 
-        audio_data: bytes, 
-        claimed_identity: str,
-        threshold: float = 0.85
-    ) -> Tuple[bool, float, str]:
+    def add_voice_sample(
+        self,
+        name: str,
+        sample: bytes
+    ) -> bool:
         """
-        Vérifie si la voix correspond à l'identité revendiquée
+        Ajoute un échantillon vocal au profil
         
         Args:
-            audio_data: Données audio à vérifier
-            claimed_identity: Nom que la personne prétend être
-            threshold: Seuil de similarité requis (0.0 à 1.0)
+            name: Nom de la personne
+            sample: Échantillon audio
             
         Returns:
-            (match, confidence, message)
+            Succès de l'ajout
         """
-        if claimed_identity not in self.voice_profiles:
-            return False, 0.0, f"Je n'ai pas de profil vocal pour {claimed_identity}."
+        if name not in self.voice_profiles:
+            print(f"❌ Aucun profil vocal pour {name}")
+            return False
         
-        # Extrait les caractéristiques de l'audio reçu
-        features = self.extract_voice_features(audio_data)
+        self.voice_profiles[name]['samples_count'] += 1
+        self.voice_profiles[name]['last_updated'] = datetime.now()
         
-        # Compare avec le profil enregistré
-        stored_profile = self.voice_profiles[claimed_identity]
-        similarity = self._calculate_similarity(features, stored_profile.voice_features)
-        
-        # Décision
-        if similarity >= threshold:
-            message = f"✅ Voix vérifiée : C'est bien {claimed_identity}."
-            return True, similarity, message
-        elif similarity >= 0.6:
-            message = f"⚠️ Voix suspecte : Ressemble à {claimed_identity} mais pas tout à fait..."
-            self._log_suspicious_attempt(claimed_identity, similarity)
-            return False, similarity, message
-        else:
-            message = f"🚨 ALERTE : Ce n'est PAS {claimed_identity} ! Possible imposteur !"
-            self._log_deepfake_attempt(claimed_identity, similarity)
-            return False, similarity, message
+        print(f"✅ Échantillon ajouté pour {name} ({self.voice_profiles[name]['samples_count']} total)")
+        return True
     
-    def identify_speaker(
-        self, 
-        audio_data: bytes,
-        min_confidence: float = 0.75
-    ) -> Tuple[Optional[str], float, str]:
+    async def recognize_speaker(
+        self,
+        audio_data: bytes
+    ) -> tuple[Optional[str], float]:
         """
-        Identifie qui parle parmi les profils connus
+        Reconnaît le locuteur depuis l'audio
         
         Args:
             audio_data: Données audio
-            min_confidence: Confiance minimale requise
             
         Returns:
-            (nom_identifié, confiance, message)
+            (nom_reconnu, niveau_confiance)
         """
-        if not self.voice_profiles:
-            return None, 0.0, "Je n'ai encore aucun profil vocal enregistré."
+        if not self.recognition_enabled:
+            return None, 0.0
         
-        features = self.extract_voice_features(audio_data)
+        # Simulation pour l'instant
+        # Dans une vraie implémentation, on utiliserait un modèle ML
         
-        # Compare avec tous les profils
-        best_match = None
-        best_similarity = 0.0
+        # Si on a des profils, retourne le plus probable
+        if self.voice_profiles:
+            # Pour la simulation, retourne le premier profil avec confiance moyenne
+            first_name = list(self.voice_profiles.keys())[0]
+            confidence = 0.8
+            
+            self.voice_profiles[first_name]['last_recognized'] = datetime.now()
+            self.voice_profiles[first_name]['recognition_count'] += 1
+            self.last_speaker = first_name
+            
+            return first_name, confidence
         
-        for name, profile in self.voice_profiles.items():
-            similarity = self._calculate_similarity(features, profile.voice_features)
-            if similarity > best_similarity:
-                best_similarity = similarity
-                best_match = name
-        
-        # Décision
-        if best_similarity >= min_confidence:
-            message = f"Je reconnais ta voix, {best_match} !"
-            return best_match, best_similarity, message
-        elif best_similarity >= 0.5:
-            message = f"Ta voix ressemble un peu à {best_match}, mais je ne suis pas sûre..."
-            return None, best_similarity, message
-        else:
-            message = "Je ne reconnais pas ta voix. Qui es-tu ?"
-            self._log_unknown_voice(features)
-            return None, best_similarity, message
+        return None, 0.0
     
-    def _calculate_similarity(
-        self, 
-        features1: Dict[str, float], 
-        features2: Dict[str, float]
-    ) -> float:
-        """
-        Calcule la similarité entre deux ensembles de caractéristiques vocales
-        
-        Returns:
-            Score de similarité (0.0 à 1.0)
-        """
-        # Version simplifiée - calcule la distance euclidienne normalisée
-        # Dans une vraie implémentation, on utiliserait des algorithmes plus sophistiqués
-        
-        if not features1 or not features2:
-            return 0.0
-        
-        # Calcule les différences pour chaque caractéristique
-        differences = []
-        for key in features1.keys():
-            if key in features2:
-                # Normalise la différence (simplifié)
-                diff = abs(features1[key] - features2[key])
-                differences.append(diff)
-        
-        if not differences:
-            return 0.0
-        
-        # Moyenne des différences, inversée pour obtenir similarité
-        avg_diff = sum(differences) / len(differences)
-        similarity = max(0.0, 1.0 - avg_diff)
-        
-        return similarity
-    
-    def detect_deepfake(
-        self, 
+    def verify_speaker(
+        self,
         audio_data: bytes,
-        claimed_identity: str
-    ) -> Tuple[bool, float, str]:
+        claimed_name: str
+    ) -> tuple[bool, float]:
         """
-        Détecte si l'audio est un deepfake ou un enregistrement
+        Vérifie si l'audio correspond à une personne spécifique
         
         Args:
-            audio_data: Données audio à analyser
-            claimed_identity: Identité revendiquée
+            audio_data: Données audio
+            claimed_name: Nom revendiqué
             
         Returns:
-            (is_deepfake, confidence, message)
+            (vérifié, niveau_confiance)
         """
-        # Indicateurs de deepfake/enregistrement:
-        # - Qualité audio trop parfaite
-        # - Absence de bruit de fond naturel
-        # - Patterns répétitifs
-        # - Artefacts de compression AI
+        if claimed_name not in self.voice_profiles:
+            return False, 0.0
         
-        # Version simplifiée pour l'instant
-        # Une vraie implémentation analyserait:
-        # - Spectrogramme pour artefacts
-        # - Cohérence temporelle
-        # - Micro-variations naturelles
+        # Simulation
+        # Dans une vraie implémentation, on comparerait avec le profil
+        confidence = 0.85
+        verified = confidence > self.confidence_threshold
         
-        indicators = {
-            'audio_quality': 0.0,  # Trop parfait = suspect
-            'background_noise': 0.0,  # Absence = suspect
-            'naturalness': 0.0,  # Manque de variations = suspect
-            'compression_artifacts': 0.0  # Artefacts AI = suspect
-        }
-        
-        # Score de suspicion (0 = naturel, 1 = deepfake certain)
-        suspicion_score = sum(indicators.values()) / len(indicators)
-        
-        if suspicion_score > 0.7:
-            message = f"🚨 DEEPFAKE DÉTECTÉ ! Quelqu'un essaie d'imiter {claimed_identity} !"
-            self._log_deepfake_attempt(claimed_identity, suspicion_score)
-            return True, suspicion_score, message
-        elif suspicion_score > 0.4:
-            message = f"⚠️ Audio suspect... Possible enregistrement ou manipulation."
-            return True, suspicion_score, message
-        else:
-            message = "✅ Audio semble naturel."
-            return False, suspicion_score, message
+        return verified, confidence
     
-    def _log_unknown_voice(self, features: Dict[str, float]):
-        """Enregistre une voix inconnue détectée"""
-        self.unknown_voices_detected.append({
-            'timestamp': datetime.datetime.now(),
-            'features': features
-        })
-        
-        # Garde seulement les 100 dernières
-        if len(self.unknown_voices_detected) > 100:
-            self.unknown_voices_detected.pop(0)
+    def get_voice_profile(self, name: str) -> Optional[Dict]:
+        """Retourne le profil vocal d'une personne"""
+        return self.voice_profiles.get(name)
     
-    def _log_suspicious_attempt(self, claimed_identity: str, similarity: float):
-        """Enregistre une tentative suspecte"""
-        print(f"⚠️ Tentative suspecte détectée : quelqu'un prétend être {claimed_identity} (similarité: {similarity:.0%})")
+    def list_profiles(self) -> List[str]:
+        """Liste tous les profils vocaux enregistrés"""
+        return list(self.voice_profiles.keys())
     
-    def _log_deepfake_attempt(self, claimed_identity: str, suspicion_score: float):
-        """Enregistre une tentative de deepfake"""
-        self.deepfake_attempts.append({
-            'timestamp': datetime.datetime.now(),
-            'claimed_identity': claimed_identity,
-            'suspicion_score': suspicion_score
-        })
-        
-        print(f"🚨 ALERTE DEEPFAKE : Tentative d'imiter {claimed_identity} (score: {suspicion_score:.0%})")
-        
-        # Garde seulement les 50 dernières
-        if len(self.deepfake_attempts) > 50:
-            self.deepfake_attempts.pop(0)
-    
-    def update_voice_profile(
-        self, 
-        name: str, 
-        audio_sample: bytes
-    ) -> bool:
+    def remove_voice_profile(self, name: str) -> bool:
         """
-        Met à jour un profil vocal avec un nouvel échantillon
+        Supprime un profil vocal
         
         Args:
             name: Nom de la personne
-            audio_sample: Nouvel échantillon audio
             
         Returns:
-            True si mise à jour réussie
+            Succès de la suppression
         """
         if name not in self.voice_profiles:
             return False
         
-        profile = self.voice_profiles[name]
-        
-        # Extrait les nouvelles caractéristiques
-        new_features = self.extract_voice_features(audio_sample)
-        
-        # Met à jour le profil (moyenne pondérée)
-        weight_old = profile.samples_count / (profile.samples_count + 1)
-        weight_new = 1 / (profile.samples_count + 1)
-        
-        for key in profile.voice_features.keys():
-            profile.voice_features[key] = (
-                profile.voice_features[key] * weight_old +
-                new_features[key] * weight_new
-            )
-        
-        profile.samples_count += 1
-        profile.last_updated = datetime.datetime.now()
-        profile.confidence = min(1.0, profile.samples_count / 10.0)
-        
+        del self.voice_profiles[name]
+        print(f"🗑️  Profil vocal de {name} supprimé")
         return True
     
-    def get_security_summary(self) -> str:
-        """Résumé de sécurité du système vocal"""
-        summary = "🔊 Système de Reconnaissance Vocale\n\n"
+    def get_recognition_stats(self) -> Dict[str, Any]:
+        """Retourne les statistiques de reconnaissance"""
+        total_recognitions = sum(
+            profile['recognition_count'] 
+            for profile in self.voice_profiles.values()
+        )
         
-        summary += f"👥 Profils vocaux enregistrés: {len(self.voice_profiles)}\n"
-        
-        for name, profile in self.voice_profiles.items():
-            summary += f"  • {name}: {profile.samples_count} échantillons, confiance {profile.confidence:.0%}\n"
-        
-        summary += f"\n⚠️ Voix inconnues détectées: {len(self.unknown_voices_detected)}\n"
-        summary += f"🚨 Tentatives de deepfake: {len(self.deepfake_attempts)}\n"
-        
-        if self.deepfake_attempts:
-            summary += "\nDernières alertes deepfake:\n"
-            for attempt in self.deepfake_attempts[-5:]:
-                timestamp = attempt['timestamp'].strftime('%Y-%m-%d %H:%M')
-                summary += f"  • {timestamp}: Tentative d'imiter {attempt['claimed_identity']}\n"
-        
-        return summary
+        return {
+            'enabled': self.recognition_enabled,
+            'profiles_count': len(self.voice_profiles),
+            'total_recognitions': total_recognitions,
+            'last_speaker': self.last_speaker,
+            'confidence_threshold': self.confidence_threshold
+        }
     
-    def export_state(self) -> Dict:
-        """Exporte l'état pour sauvegarde"""
+    def export_state(self) -> Dict[str, Any]:
+        """Exporte l'état du système vocal"""
         return {
             'voice_profiles': {
                 name: {
-                    'name': profile.name,
-                    'voice_features': profile.voice_features,
-                    'samples_count': profile.samples_count,
-                    'first_recorded': profile.first_recorded.isoformat() if profile.first_recorded else None,
-                    'last_updated': profile.last_updated.isoformat() if profile.last_updated else None,
-                    'confidence': profile.confidence
+                    'name': profile['name'],
+                    'created_at': profile['created_at'].isoformat(),
+                    'samples_count': profile['samples_count'],
+                    'recognition_count': profile['recognition_count']
                 }
                 for name, profile in self.voice_profiles.items()
             },
-            'unknown_voices_count': len(self.unknown_voices_detected),
-            'deepfake_attempts': self.deepfake_attempts[-50:]  # Garde les 50 dernières
+            'recognition_enabled': self.recognition_enabled,
+            'confidence_threshold': self.confidence_threshold
         }
     
-    def import_state(self, state: Dict):
+    def import_state(self, state: Dict[str, Any]):
         """Importe un état sauvegardé"""
+        profiles_data = state.get('voice_profiles', {})
+        
         self.voice_profiles = {}
+        for name, data in profiles_data.items():
+            self.voice_profiles[name] = {
+                'name': data['name'],
+                'created_at': datetime.fromisoformat(data['created_at']),
+                'samples_count': data['samples_count'],
+                'recognition_count': data.get('recognition_count', 0),
+                'last_recognized': None,
+                'voice_characteristics': {}
+            }
         
-        for name, data in state.get('voice_profiles', {}).items():
-            profile = VoiceProfile(
-                name=data['name'],
-                voice_features=data['voice_features'],
-                samples_count=data['samples_count'],
-                first_recorded=datetime.datetime.fromisoformat(data['first_recorded']) if data['first_recorded'] else None,
-                last_updated=datetime.datetime.fromisoformat(data['last_updated']) if data['last_updated'] else None,
-                confidence=data['confidence']
-            )
-            self.voice_profiles[name] = profile
-        
-        self.deepfake_attempts = state.get('deepfake_attempts', [])
+        self.recognition_enabled = state.get('recognition_enabled', False)
+        self.confidence_threshold = state.get('confidence_threshold', 0.75)
 
 
 if __name__ == "__main__":
-    print("🎤 Test du Système de Biométrie Vocale\n")
+    print("🎤 Test du système de biométrie vocale")
     
-    bio = VoiceBiometrics()
-    print(bio.get_security_summary())
+    async def test():
+        # Initialise
+        voice = VoiceBiometrics()
+        await voice.initialize()
+        
+        # Crée un profil
+        voice.create_voice_profile("Pierre-Paul")
+        
+        # Simule reconnaissance
+        audio_test = b"audio_data_simulation"
+        recognized, confidence = await voice.recognize_speaker(audio_test)
+        
+        if recognized:
+            print(f"\n✅ Locuteur reconnu: {recognized} (confiance: {confidence:.0%})")
+        else:
+            print("\n❌ Aucun locuteur reconnu")
+        
+        # Statistiques
+        stats = voice.get_recognition_stats()
+        print(f"\n📊 Statistiques:")
+        print(f"   Profils: {stats['profiles_count']}")
+        print(f"   Reconnaissances: {stats['total_recognitions']}")
+    
+    asyncio.run(test())

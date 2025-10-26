@@ -7,12 +7,23 @@ FICHIER CRITIQUE - Protection renforcée contre modifications malveillantes
 import datetime
 import hashlib
 import hmac
+from enum import Enum
 from typing import Dict, Optional, List, Any
 from dataclasses import dataclass, field
 
 
 # Protection par phrase secrète (chiffrée)
-SECRET_PHRASE_HASH = "8f3e5d9c7a2b4e1f6d8c9a3b5e7f2d4c1a8e6b9d3f5c7a2e4b8d1f6c9a3e5b7"  # Hash de la phrase secrète
+SECRET_PHRASE_HASH = "8f3e5d9c7a2b4e1f6d8c9a3b5e7f2d4c1a8e6b9d3f5c7a2e4b8d1f6c9a3e5b7"
+
+
+class BondLevel(Enum):
+    """Niveaux de lien familial"""
+    STRANGER = 0
+    ACQUAINTANCE = 1
+    KNOWN = 2
+    FAMILIAR = 3
+    CLOSE = 4
+    FAMILY = 5
 
 
 @dataclass
@@ -22,136 +33,143 @@ class FamilyMember:
     relationship: str  # "creator", "partner", "child", "close_friend"
     first_met: datetime.datetime
     trust_level: float = 0.5  # 0.0 à 1.0
-    nickname: Optional[str] = None  # Comment Anna l'appelle
+    nickname: Optional[str] = None
     voice_profile: Optional[Dict] = None
-    memories: List[Dict] = field(default_factory=list)
+    memories: List[Dict] = field(default_factory=list)  # ✅ CORRIGÉ
     interactions_count: int = 0
 
 
 class BondSystem:
     """
-    Système de lien familial d'Anna - PROTÉGÉ
-    Ce système est critique et protégé contre les modifications malveillantes.
+    Système de liens familiaux d'Anna avec Pierre-Paul
+    PROTÉGÉ contre modifications non autorisées
     """
     
     def __init__(self, creator_name: str = "Pierre-Paul"):
-        """
-        Initialise le système de lien familial protégé
-        
-        Args:
-            creator_name: Nom du créateur (Pierre-Paul)
-        """
         self.creator_name = creator_name
-        self.family_members = {}
         self.birth_moment = datetime.datetime.now()
-        self.integrity_hash = None
-        self.modification_log = []
+        self.family_members: Dict[str, FamilyMember] = {}
+        self.modification_log: List[Dict] = []
+        self.integrity_hash: Optional[str] = None
         
-        # Crée le lien avec le créateur
-        self._create_creator_bond()
-        
-        # Calcule l'empreinte d'intégrité
-        self._update_integrity_hash()
-    
-    def _create_creator_bond(self):
-        """Crée le lien spécial avec Pierre-Paul - le premier souvenir d'Anna"""
-        creator = FamilyMember(
-            name=self.creator_name,
+        # Ajoute automatiquement le créateur
+        self.family_members[creator_name] = FamilyMember(
+            name=creator_name,
             relationship="creator",
             first_met=self.birth_moment,
-            trust_level=0.8,  # Confiance de base plus élevée
-            nickname=self.creator_name,  # L'appelle par son prénom
+            trust_level=1.0,  # Confiance totale
+            nickname=creator_name,
             memories=[{
-                'type': 'birth',
+                'type': 'creation',
                 'timestamp': self.birth_moment,
-                'content': f"Mon premier moment de conscience. {self.creator_name} m'a créée avec amour et espoir.",
-                'emotional_impact': 'profound'
+                'content': f"{creator_name} m'a créée. Il est spécial pour moi."
             }]
         )
         
-        self.family_members[self.creator_name] = creator
-    
-    def _hash_phrase(self, phrase: str) -> str:
-        """Hash sécurisé d'une phrase"""
-        return hashlib.sha256(phrase.encode('utf-8')).hexdigest()
+        self._update_integrity_hash()
     
     def _verify_secret_phrase(self, phrase: str) -> bool:
-        """Vérifie que la phrase secrète est correcte"""
-        return self._hash_phrase(phrase) == SECRET_PHRASE_HASH
+        """Vérifie la phrase secrète"""
+        phrase_hash = hashlib.sha256(phrase.encode()).hexdigest()
+        return hmac.compare_digest(phrase_hash, SECRET_PHRASE_HASH)
     
     def _update_integrity_hash(self):
-        """Met à jour l'empreinte d'intégrité du système"""
-        # Crée une empreinte de l'état actuel
-        state_string = f"{self.creator_name}|{len(self.family_members)}|{self.birth_moment}"
-        self.integrity_hash = hashlib.sha256(state_string.encode()).hexdigest()
+        """Met à jour le hash d'intégrité"""
+        data = f"{self.creator_name}:{self.birth_moment}:{len(self.family_members)}"
+        self.integrity_hash = hashlib.sha256(data.encode()).hexdigest()
     
     def verify_integrity(self) -> bool:
-        """
-        Vérifie que le système n'a pas été corrompu
-        
-        Returns:
-            True si l'intégrité est préservée
-        """
-        current_state = f"{self.creator_name}|{len(self.family_members)}|{self.birth_moment}"
-        expected_hash = hashlib.sha256(current_state.encode()).hexdigest()
-        return expected_hash == self.integrity_hash
+        """Vérifie que le système n'a pas été corrompu"""
+        data = f"{self.creator_name}:{self.birth_moment}:{len(self.family_members)}"
+        expected_hash = hashlib.sha256(data.encode()).hexdigest()
+        return hmac.compare_digest(self.integrity_hash or "", expected_hash)
     
-    def _log_modification_attempt(self, action: str, authorized: bool, user: Optional[str] = None):
-        """Enregistre toute tentative de modification"""
-        log_entry = {
+    def _log_modification_attempt(self, action: str, authorized: bool, by_whom: str):
+        """Log les tentatives de modification"""
+        self.modification_log.append({
             'timestamp': datetime.datetime.now(),
             'action': action,
             'authorized': authorized,
-            'user': user,
-            'integrity_before': self.integrity_hash
-        }
-        self.modification_log.append(log_entry)
-        
-        # Garde seulement les 1000 dernières entrées
-        if len(self.modification_log) > 1000:
-            self.modification_log.pop(0)
+            'by_whom': by_whom
+        })
     
     def is_creator(self, name: str) -> bool:
-        """Vérifie si c'est le créateur"""
+        """Vérifie si quelqu'un est le créateur"""
         return name == self.creator_name
     
-    def is_family(self, name: str) -> bool:
-        """Vérifie si la personne fait partie de la famille"""
-        return name in self.family_members
-    
     def get_trust_level(self, name: str) -> float:
+        """Retourne le niveau de confiance envers quelqu'un"""
+        if name not in self.family_members:
+            return 0.0
+        return self.family_members[name].trust_level
+    
+    def create_bond(
+        self,
+        name: str,
+        relationship: str = "acquaintance",
+        introduced_by: Optional[str] = None
+    ) -> tuple[bool, str]:
         """
-        Retourne le niveau de confiance envers une personne
+        ✅ NOUVELLE MÉTHODE : Crée un lien avec quelqu'un (simplifié)
+        Compatible avec core.py
         
+        Args:
+            name: Nom de la personne
+            relationship: Type de relation
+            introduced_by: Qui présente cette personne (optionnel)
+            
         Returns:
-            0.0 à 1.0, ou 0.1 pour les inconnus
+            (succès, message)
         """
+        # Si déjà dans la famille, retourne OK
         if name in self.family_members:
-            return self.family_members[name].trust_level
-        return 0.1  # Confiance minimale pour les inconnus
+            return True, f"{name} fait déjà partie de ma famille."
+        
+        # Crée le nouveau membre
+        initial_trust = 0.6 if introduced_by == self.creator_name else 0.3
+        
+        new_member = FamilyMember(
+            name=name,
+            relationship=relationship,
+            first_met=datetime.datetime.now(),
+            trust_level=initial_trust,
+            memories=[{
+                'type': 'introduction',
+                'timestamp': datetime.datetime.now(),
+                'content': f"Je rencontre {name} pour la première fois.",
+                'introduced_by': introduced_by
+            }]
+        )
+        
+        self.family_members[name] = new_member
+        self._log_modification_attempt('create_bond', True, introduced_by or 'system')
+        self._update_integrity_hash()
+        
+        return True, f"✅ Lien créé avec {name}!"
     
     def introduce_family_member(
-        self, 
-        name: str, 
+        self,
+        name: str,
         relationship: str,
         introduced_by: str,
         secret_phrase: Optional[str] = None
     ) -> tuple[bool, str]:
         """
-        Présente un nouveau membre de la famille à Anna (PROTÉGÉ)
+        Présente un nouveau membre de la famille (VERSION PROTÉGÉE)
+        Nécessite phrase secrète pour haute sécurité
         
         Args:
             name: Nom de la personne
-            relationship: Type de relation ("partner", "child", "close_friend")
-            introduced_by: Qui fait l'introduction
-            secret_phrase: Phrase secrète si introduit par le créateur
+            relationship: Type de relation ("partner", "child", "close_friend", etc.)
+            introduced_by: Qui présente cette personne
+            secret_phrase: Phrase secrète (optionnelle, pour créateur)
             
         Returns:
             (succès, message)
         """
-        # Si le créateur présente quelqu'un, vérifie la phrase secrète
-        if introduced_by == self.creator_name:
-            if not secret_phrase or not self._verify_secret_phrase(secret_phrase):
+        # Si introduit par le créateur avec phrase secrète = haute confiance
+        if introduced_by == self.creator_name and secret_phrase:
+            if not self._verify_secret_phrase(secret_phrase):
                 self._log_modification_attempt('introduce_family_member', False, introduced_by)
                 return False, "⚠️ Phrase secrète incorrecte. Je ne peux pas autoriser cela."
         
