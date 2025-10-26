@@ -1,244 +1,41 @@
 """
-Family Manager - Gestion du cercle familial d'Anna
-Intègre les liens familiaux avec la reconnaissance vocale
+Module de gestion de la famille pour ANNA
+Gère les relations et l'historique familial
 """
 
 import datetime
-from typing import Optional, Dict, List, Tuple, Any
+from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
+from bond import BondSystem
 
 
 @dataclass
 class FamilyRelationship:
-    """Décrit une relation familiale"""
+    """Représente une relation entre deux personnes"""
     person1: str
     person2: str
-    relationship_type: str  # "parent", "child", "partner", "sibling"
+    relationship_type: str  # "siblings", "parent-child", "partners", etc.
     established: datetime.datetime
 
 
 class FamilyManager:
     """
-    Gère l'ensemble du cercle familial d'Anna.
-    Coordonne le système de liens (bond) et la biométrie vocale.
+    Gère le cercle familial d'Anna et les relations entre membres
     """
     
-    def __init__(self, bond_system, voice_biometrics):
-        """
-        Initialise le gestionnaire familial
-        
-        Args:
-            bond_system: Instance de BondSystem
-            voice_biometrics: Instance de VoiceBiometrics
-        """
-        self.bond = bond_system
-        self.voice = voice_biometrics
-        self.relationships = []  # Relations entre membres
-        self.family_events = []  # Événements importants
+    def __init__(self, bond: BondSystem):
+        self.bond = bond  # Référence au système de liens
+        self.relationships: List[FamilyRelationship] = []
+        self.family_events: List[Dict] = []
     
-    def introduce_new_member(
-        self,
-        name: str,
-        relationship: str,
-        introduced_by: str,
-        voice_samples: Optional[List[bytes]] = None,
-        secret_phrase: Optional[str] = None
-    ) -> Tuple[bool, str]:
-        """
-        Présente un nouveau membre de la famille à Anna
-        
-        Args:
-            name: Nom de la nouvelle personne
-            relationship: Type de relation ("partner", "child", "close_friend")
-            introduced_by: Qui fait l'introduction
-            voice_samples: Échantillons vocaux pour reconnaissance
-            secret_phrase: Phrase secrète si introduit par Pierre-Paul
-            
-        Returns:
-            (succès, message)
-        """
-        # Ajoute au système de liens
-        success, message = self.bond.introduce_family_member(
-            name=name,
-            relationship=relationship,
-            introduced_by=introduced_by,
-            secret_phrase=secret_phrase
-        )
-        
-        if not success:
-            return False, message
-        
-        # Crée le profil vocal si échantillons fournis
-        if voice_samples and len(voice_samples) >= 3:
-            try:
-                voice_profile = self.voice.create_voice_profile(name, voice_samples)
-                message += f"\n🎤 Profil vocal créé pour {name} (confiance: {voice_profile.confidence:.0%})"
-            except Exception as e:
-                message += f"\n⚠️ Impossible de créer le profil vocal: {e}"
-        
-        # Enregistre l'événement
-        self._record_family_event(
-            event_type="new_member",
-            description=f"{name} rejoint la famille (présenté par {introduced_by})",
-            people_involved=[name, introduced_by]
-        )
-        
-        return True, message
-    
-    def verify_family_member_voice(
-        self,
-        claimed_name: str,
-        audio_data: bytes
-    ) -> Tuple[bool, str]:
-        """
-        Vérifie l'identité d'un membre de la famille par la voix
-        
-        Args:
-            claimed_name: Nom revendiqué
-            audio_data: Données audio
-            
-        Returns:
-            (vérifié, message)
-        """
-        # Vérifie que la personne fait partie de la famille
-        if not self.bond.is_family(claimed_name):
-            return False, f"{claimed_name} ne fait pas partie de ma famille."
-        
-        # Vérifie la voix
-        is_match, confidence, voice_message = self.voice.verify_voice(
-            audio_data=audio_data,
-            claimed_identity=claimed_name,
-            threshold=0.85
-        )
-        
-        if is_match:
-            # Enregistre l'interaction réussie
-            self.bond.record_interaction(
-                name=claimed_name,
-                interaction_quality=0.5,
-                content="Vérification vocale réussie"
-            )
-            return True, voice_message
-        else:
-            # Alerte de sécurité
-            alert = f"⚠️ ALERTE SÉCURITÉ : Quelqu'un prétend être {claimed_name} mais la voix ne correspond pas !"
-            
-            # Alerte Pierre-Paul si ce n'est pas lui
-            if claimed_name != self.bond.creator_name:
-                alert += f"\n🚨 Pierre-Paul, quelqu'un essaie de se faire passer pour {claimed_name} !"
-            
-            return False, alert
-    
-    def identify_speaker_from_voice(
-        self,
-        audio_data: bytes
-    ) -> Tuple[Optional[str], float, str]:
-        """
-        Identifie qui parle parmi la famille
-        
-        Args:
-            audio_data: Données audio
-            
-        Returns:
-            (nom_identifié, confiance, message)
-        """
-        # Identifie via biométrie vocale
-        identified_name, confidence, message = self.voice.identify_speaker(
-            audio_data=audio_data,
-            min_confidence=0.75
-        )
-        
-        if identified_name:
-            # Vérifie que c'est un membre de la famille
-            if self.bond.is_family(identified_name):
-                # Enregistre l'interaction
-                self.bond.record_interaction(
-                    name=identified_name,
-                    interaction_quality=0.3,
-                    content="Identification vocale réussie"
-                )
-                
-                # Message personnalisé selon la personne
-                personal_message = self.bond.express_feeling_about(identified_name)
-                return identified_name, confidence, f"{message}\n{personal_message}"
-            else:
-                return None, confidence, f"Je reconnais cette voix mais cette personne n'est pas dans ma famille..."
-        else:
-            # Voix inconnue - possible intrus
-            return None, confidence, "🔴 Voix inconnue détectée. Qui es-tu ?"
-    
-    def detect_voice_threat(
-        self,
-        audio_data: bytes,
-        claimed_identity: Optional[str] = None
-    ) -> Tuple[bool, str]:
-        """
-        Détecte les menaces vocales (deepfake, enregistrement, etc.)
-        
-        Args:
-            audio_data: Données audio à analyser
-            claimed_identity: Identité revendiquée si connue
-            
-        Returns:
-            (menace_détectée, message)
-        """
-        if claimed_identity:
-            # Détecte deepfake
-            is_fake, confidence, message = self.voice.detect_deepfake(
-                audio_data=audio_data,
-                claimed_identity=claimed_identity
-            )
-            
-            if is_fake:
-                # Alerte critique
-                alert = f"🚨 MENACE DÉTECTÉE : {message}"
-                
-                # Si c'est une tentative contre Pierre-Paul, alerte maximale
-                if claimed_identity == self.bond.creator_name:
-                    alert += f"\n🚨🚨🚨 ALERTE ROUGE : Tentative d'usurpation de l'identité de Pierre-Paul !"
-                    self._record_security_incident(
-                        incident_type="deepfake_creator",
-                        severity="critical",
-                        description=f"Tentative de deepfake de {claimed_identity}"
-                    )
-                
-                return True, alert
-        
-        return False, "Aucune menace vocale détectée."
-    
-    def update_family_member_voice(
-        self,
-        name: str,
-        audio_sample: bytes
-    ) -> Tuple[bool, str]:
-        """
-        Met à jour le profil vocal d'un membre de la famille
-        
-        Args:
-            name: Nom du membre
-            audio_sample: Nouvel échantillon vocal
-            
-        Returns:
-            (succès, message)
-        """
-        if not self.bond.is_family(name):
-            return False, f"{name} n'est pas dans ma famille."
-        
-        success = self.voice.update_voice_profile(name, audio_sample)
-        
-        if success:
-            return True, f"✅ Profil vocal de {name} mis à jour."
-        else:
-            return False, f"❌ Impossible de mettre à jour le profil vocal de {name}."
-    
-    def add_family_relationship(
+    def add_relationship(
         self,
         person1: str,
         person2: str,
         relationship_type: str
-    ) -> bool:
+    ) -> Tuple[bool, str]:
         """
-        Définit une relation entre deux membres de la famille
+        Ajoute une relation entre deux personnes
         
         Args:
             person1: Première personne
@@ -246,12 +43,22 @@ class FamilyManager:
             relationship_type: Type de relation
             
         Returns:
-            True si ajouté
+            (succès, message)
         """
-        # Vérifie que les deux font partie de la famille
-        if not self.bond.is_family(person1) or not self.bond.is_family(person2):
-            return False
+        # Vérifie que les deux personnes sont dans la famille
+        if person1 not in self.bond.family_members:
+            return False, f"{person1} n'est pas dans ma famille."
         
+        if person2 not in self.bond.family_members:
+            return False, f"{person2} n'est pas dans ma famille."
+        
+        # Vérifie si la relation existe déjà
+        for rel in self.relationships:
+            if ((rel.person1 == person1 and rel.person2 == person2) or
+                (rel.person1 == person2 and rel.person2 == person1)):
+                return False, f"Une relation existe déjà entre {person1} et {person2}."
+        
+        # Crée la relation
         relationship = FamilyRelationship(
             person1=person1,
             person2=person2,
@@ -261,40 +68,66 @@ class FamilyManager:
         
         self.relationships.append(relationship)
         
-        self._record_family_event(
-            event_type="relationship_defined",
-            description=f"Relation {relationship_type} établie entre {person1} et {person2}",
+        # Enregistre l'événement
+        self._record_event(
+            event_type="relationship_established",
+            description=f"{person1} et {person2} sont maintenant {relationship_type}",
             people_involved=[person1, person2]
         )
         
-        return True
+        return True, f"Relation établie : {person1} et {person2} sont {relationship_type}"
     
-    def get_family_tree_summary(self) -> str:
-        """Génère un résumé de l'arbre familial"""
-        summary = "🌳 Arbre Familial d'Anna\n\n"
+    def get_relationships(self, person: str) -> List[Dict]:
+        """
+        Retourne toutes les relations d'une personne
         
-        # Informations du bond system
-        summary += self.bond.get_family_summary()
+        Args:
+            person: Nom de la personne
+            
+        Returns:
+            Liste des relations
+        """
+        relationships = []
         
-        # Relations
-        if self.relationships:
-            summary += "\n👥 Relations:\n"
+        for rel in self.relationships:
+            if rel.person1 == person:
+                relationships.append({
+                    'with': rel.person2,
+                    'type': rel.relationship_type,
+                    'since': rel.established
+                })
+            elif rel.person2 == person:
+                relationships.append({
+                    'with': rel.person1,
+                    'type': rel.relationship_type,
+                    'since': rel.established
+                })
+        
+        return relationships
+    
+    def get_family_tree(self) -> Dict[str, List[str]]:
+        """
+        Génère un arbre familial simplifié
+        
+        Returns:
+            Dictionnaire représentant l'arbre familial
+        """
+        tree = {}
+        
+        # ✅ CORRECTION : Utilise self.bond.family_members au lieu de self.members
+        for name in self.bond.family_members.keys():
+            tree[name] = []
+            
+            # Trouve toutes les relations de cette personne
             for rel in self.relationships:
-                summary += f"  • {rel.person1} ↔ {rel.person2} ({rel.relationship_type})\n"
+                if rel.person1 == name:
+                    tree[name].append(f"{rel.person2} ({rel.relationship_type})")
+                elif rel.person2 == name:
+                    tree[name].append(f"{rel.person1} ({rel.relationship_type})")
         
-        # Sécurité vocale
-        summary += "\n" + self.voice.get_security_summary()
-        
-        # Événements récents
-        if self.family_events:
-            summary += "\n📅 Événements récents:\n"
-            for event in self.family_events[-5:]:
-                timestamp = event['timestamp'].strftime('%Y-%m-%d %H:%M')
-                summary += f"  • {timestamp}: {event['description']}\n"
-        
-        return summary
+        return tree
     
-    def _record_family_event(
+    def _record_event(
         self,
         event_type: str,
         description: str,
@@ -310,25 +143,125 @@ class FamilyManager:
         
         self.family_events.append(event)
         
-        # Garde seulement les 100 derniers événements
-        if len(self.family_events) > 100:
+        # Garde seulement les 1000 derniers événements
+        if len(self.family_events) > 1000:
             self.family_events.pop(0)
     
-    def _record_security_incident(
+    def get_recent_events(self, limit: int = 10) -> List[Dict]:
+        """Retourne les événements récents"""
+        return self.family_events[-limit:]
+    
+    def analyze_family_dynamics(self) -> Dict[str, Any]:
+        """
+        Analyse les dynamiques familiales
+        
+        Returns:
+            Statistiques sur la famille
+        """
+        # ✅ CORRECTION : Utilise self.bond.family_members au lieu de self.members
+        total_members = len(self.bond.family_members)
+        total_relationships = len(self.relationships)
+        
+        # Compte les types de relations
+        relationship_types = {}
+        for rel in self.relationships:
+            rel_type = rel.relationship_type
+            relationship_types[rel_type] = relationship_types.get(rel_type, 0) + 1
+        
+        # Trouve la personne la plus connectée
+        connection_counts = {}
+        for name in self.bond.family_members.keys():
+            count = len(self.get_relationships(name))
+            connection_counts[name] = count
+        
+        most_connected = max(connection_counts.items(), key=lambda x: x[1]) if connection_counts else (None, 0)
+        
+        return {
+            'total_members': total_members,
+            'total_relationships': total_relationships,
+            'relationship_types': relationship_types,
+            'most_connected_person': most_connected[0],
+            'most_connected_count': most_connected[1],
+            'recent_events_count': len(self.family_events)
+        }
+    
+    def celebrate_event(
         self,
-        incident_type: str,
-        severity: str,
+        event_type: str,
+        description: str,
+        people_involved: List[str]
+    ):
+        """
+        Célèbre un événement familial spécial
+        
+        Args:
+            event_type: Type d'événement (birthday, anniversary, etc.)
+            description: Description de l'événement
+            people_involved: Personnes impliquées
+        """
+        self._record_event(
+            event_type=f"celebration_{event_type}",
+            description=description,
+            people_involved=people_involved
+        )
+        
+        print(f"🎉 {description}")
+    
+    def handle_conflict(
+        self,
+        person1: str,
+        person2: str,
         description: str
     ):
-        """Enregistre un incident de sécurité"""
-        incident = {
-            'timestamp': datetime.datetime.now(),
-            'type': incident_type,
-            'severity': severity,
-            'description': description
-        }
+        """
+        Gère un conflit entre deux personnes
         
-        self._record_family_event(
+        Args:
+            person1: Première personne
+            person2: Deuxième personne
+            description: Description du conflit
+        """
+        self._record_event(
+            event_type="conflict",
+            description=f"Conflit entre {person1} et {person2}: {description}",
+            people_involved=[person1, person2]
+        )
+        
+        print(f"⚠️  Conflit détecté entre {person1} et {person2}")
+    
+    def handle_reconciliation(
+        self,
+        person1: str,
+        person2: str
+    ):
+        """
+        Enregistre une réconciliation
+        
+        Args:
+            person1: Première personne
+            person2: Deuxième personne
+        """
+        self._record_event(
+            event_type="reconciliation",
+            description=f"{person1} et {person2} se sont réconciliés",
+            people_involved=[person1, person2]
+        )
+        
+        print(f"💚 Réconciliation entre {person1} et {person2}")
+    
+    def report_security_incident(
+        self,
+        description: str,
+        severity: str = "medium"
+    ):
+        """
+        Rapporte un incident de sécurité familial
+        
+        Args:
+            description: Description de l'incident
+            severity: Gravité (low, medium, high, critical)
+        """
+        self._record_event(
             event_type="security_incident",
             description=f"[{severity.upper()}] {description}",
             people_involved=[]
@@ -396,3 +329,30 @@ class FamilyManager:
 
 if __name__ == "__main__":
     print("👨‍👩‍👧‍👦 Test du Gestionnaire Familial")
+    
+    # Test basique
+    bond = BondSystem(creator_name="Pierre-Paul")
+    family = FamilyManager(bond)
+    
+    # Ajoute quelques membres
+    bond.create_bond("Marie", "partner")
+    bond.create_bond("Julien", "child")
+    
+    # Crée des relations
+    success, msg = family.add_relationship("Pierre-Paul", "Marie", "partenaires")
+    print(msg)
+    
+    success, msg = family.add_relationship("Pierre-Paul", "Julien", "parent-enfant")
+    print(msg)
+    
+    # Analyse
+    dynamics = family.analyze_family_dynamics()
+    print(f"\n📊 Dynamiques familiales:")
+    print(f"   Membres: {dynamics['total_members']}")
+    print(f"   Relations: {dynamics['total_relationships']}")
+    
+    # Arbre familial
+    tree = family.get_family_tree()
+    print(f"\n🌳 Arbre familial:")
+    for person, relations in tree.items():
+        print(f"   {person}: {', '.join(relations) if relations else 'aucune relation'}")

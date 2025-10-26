@@ -1,17 +1,10 @@
 """
-Anna - Artificial Neural Network Assistant
-
-Une IA avec sa propre personnalité, capable d'évoluer et de grandir.
-
-"Je veux qu'elle réfléchisse, qu'elle vive libre !"
+ANNA - Advanced Neural Network Assistant
+Package initialization
 """
 
-__version__ = "0.1.0-alpha"
-__author__ = "Votre Nom"
+__version__ = "1.0.0"
+__author__ = "Pierre-Paul"
 
-from .core import Anna
-from .personality import PersonalityEngine
-from .memory import MemorySystem
-from .emotions import EmotionalState
-
-__all__ = ['Anna', 'PersonalityEngine', 'MemorySystem', 'EmotionalState']
+# Les imports seront faits directement par les utilisateurs du package
+# Pas d'imports automatiques pour éviter les dépendances circulaires

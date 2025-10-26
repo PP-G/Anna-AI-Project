@@ -1,0 +1,17 @@
+{
+  "model_type": "ollama_mistral",
+  "model_name": "mistral",
+  "config": {
+    "temperature": 0.7,
+    "max_tokens": 500,
+    "top_p": 0.9,
+    "language_preference": "bilingual"
+  },
+  "usage_stats": {
+    "queries_processed": 25,
+    "tokens_generated": 0,
+    "avg_response_time": 4.145961159999998,
+    "last_used": "2025-10-24T15:08:28.321887"
+  },
+  "last_updated": "2025-10-24T15:08:31.798191"
+}
